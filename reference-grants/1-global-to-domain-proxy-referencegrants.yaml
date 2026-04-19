@@ -1,0 +1,44 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-kong-global-route-to-retail-proxy
+  namespace: retail-banking
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kong
+  to:
+    - group: ""
+      kind: Service
+      name: kong-retail-gateway-proxy
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-kong-global-route-to-payments-proxy
+  namespace: payments
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kong
+  to:
+    - group: ""
+      kind: Service
+      name: kong-payments-gateway-proxy
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-kong-global-route-to-grc-proxy
+  namespace: grc
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kong
+  to:
+    - group: ""
+      kind: Service
+      name: kong-grc-gateway-proxy
