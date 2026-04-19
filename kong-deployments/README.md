@@ -1,34 +1,55 @@
-# Multi-Controller Kong Deployment Plan
+# Multi-Controller Kong Deployment Runbook
 
-This guide deploys 4 Kong controller/data-plane releases:
+This runbook deploys 4 separate Kong Ingress Controller (KIC) + gateway data planes:
 
-1. Global: `kong-global` in namespace `kong` (`GatewayClass`: `kong-global`)
-2. Retail: `kong-retail` in namespace `retail-banking` (`GatewayClass`: `kong-retail`)
-3. Payments: `kong-payments` in namespace `payments` (`GatewayClass`: `kong-payments`)
-4. GRC: `kong-grc` in namespace `grc` (`GatewayClass`: `kong-grc`)
+1. Global KIC/gateway:
+`Release=kong-global`, `Namespace=kong`, `GatewayClass=kong-global`
+2. Retail KIC/gateway:
+`Release=kong-retail`, `Namespace=retail-banking`, `GatewayClass=kong-retail`
+3. Payments KIC/gateway:
+`Release=kong-payments`, `Namespace=payments`, `GatewayClass=kong-payments`
+4. GRC KIC/gateway:
+`Release=kong-grc`, `Namespace=grc`, `GatewayClass=kong-grc`
 
-## Prerequisites
+## Step 0: Pre-check
 
-1. Gateway API CRDs are installed.
-2. Helm is installed.
-3. You are in `/workspace/apex/12-apigateway/06-kong-global-api-gateway`.
+```bash
+kubectl config current-context
+helm version
+kubectl get ns
+```
+
+Make sure you are inside:
+
+```bash
+cd /workspace/apex/12-apigateway/06-kong-global-api-gateway
+```
 
 ## Step 1: Install Gateway API CRDs
 
 ```bash
 kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+kubectl get crd | grep gateway.networking.k8s.io
 ```
 
-## Step 2: Add Kong Helm repo
+## Step 2: Remove old single-controller Kong (if any)
 
 ```bash
-helm repo add kong https://charts.konghq.com
+helm ls -A
+helm -n kong uninstall kong || true
+kubectl delete gatewayclass kong --ignore-not-found
+```
+
+## Step 3: Add/update Kong Helm repo
+
+```bash
+helm repo add kong https://charts.konghq.com || true
 helm repo update
 ```
 
-## Step 3: Install 4 Kong releases
+## Step 4: Install KIC + gateway for each domain
 
-### 3.1 Global Kong (public entry)
+### 4.1 Global KIC (public entry)
 
 ```bash
 helm upgrade --install kong-global kong/ingress \
@@ -39,7 +60,7 @@ helm upgrade --install kong-global kong/ingress \
   --set gateway.proxy.type=LoadBalancer
 ```
 
-### 3.2 Retail Kong (domain-specific)
+### 4.2 Retail KIC
 
 ```bash
 helm upgrade --install kong-retail kong/ingress \
@@ -50,7 +71,7 @@ helm upgrade --install kong-retail kong/ingress \
   --set gateway.proxy.type=ClusterIP
 ```
 
-### 3.3 Payments Kong (domain-specific)
+### 4.3 Payments KIC
 
 ```bash
 helm upgrade --install kong-payments kong/ingress \
@@ -61,7 +82,7 @@ helm upgrade --install kong-payments kong/ingress \
   --set gateway.proxy.type=ClusterIP
 ```
 
-### 3.4 GRC Kong (domain-specific)
+### 4.4 GRC KIC
 
 ```bash
 helm upgrade --install kong-grc kong/ingress \
@@ -72,19 +93,31 @@ helm upgrade --install kong-grc kong/ingress \
   --set gateway.proxy.type=ClusterIP
 ```
 
-## Step 4: Apply manifests from this repo
+### 4.5 Verify Helm releases
 
 ```bash
-kubectl apply -f distributed-gateway/0-kong-gateway-class.yaml
-kubectl apply -f distributed-gateway/
+helm ls -A
+kubectl get pods -n kong
+kubectl get pods -n retail-banking
+kubectl get pods -n payments
+kubectl get pods -n grc
+```
+
+## Step 5: Apply manifests in this repo
+
+```bash
+kubectl apply -f global-kong-gateway/0-kong-global-gateway-class.yaml
+kubectl apply -f domain-specific-kong-gateway/0-kong-gateway-class.yaml
+kubectl apply -f global-kong-gateway/1-kong-global-gateway.yaml
+kubectl apply -f domain-specific-kong-gateway/
 kubectl apply -f apps/1-retail-banking/5-customer-profile-httproute.yaml
 kubectl apply -f apps/2-payments/5-transfer-httproute.yaml
 kubectl apply -f apps/3-risk-compliance/5-fraud-httproute.yaml
 kubectl apply -f reference-grants/
-kubectl apply -f global-kong-gateway/
+kubectl apply -f global-kong-gateway/2-global-domain-httproutes.yaml
 ```
 
-## Step 5: Verify resources
+## Step 6: Verify Gateway API resources
 
 ```bash
 kubectl get gatewayclass
@@ -93,7 +126,24 @@ kubectl get httproute -A
 kubectl get referencegrant -A
 ```
 
-Check domain proxy Services expected by `global-kong-gateway/2-global-domain-httproutes.yaml`:
+Deep check (Accepted/Programmed):
+
+```bash
+kubectl describe gateway -n kong global-kong-api-gateway
+kubectl describe gateway -n retail-banking retail-banking-kong-api-gateway
+kubectl describe gateway -n payments payments-kong-api-gateway
+kubectl describe gateway -n grc grc-kong-api-gateway
+```
+
+## Step 7: Verify expected proxy service names
+
+`global-kong-gateway/2-global-domain-httproutes.yaml` expects:
+
+1. `kong-retail-gateway-proxy` in `retail-banking`
+2. `kong-payments-gateway-proxy` in `payments`
+3. `kong-grc-gateway-proxy` in `grc`
+
+Check them:
 
 ```bash
 kubectl get svc -n retail-banking | grep gateway-proxy
@@ -101,24 +151,18 @@ kubectl get svc -n payments | grep gateway-proxy
 kubectl get svc -n grc | grep gateway-proxy
 ```
 
-Expected service names:
+If names differ, update backendRefs in:
+`global-kong-gateway/2-global-domain-httproutes.yaml`.
 
-1. `kong-retail-gateway-proxy`
-2. `kong-payments-gateway-proxy`
-3. `kong-grc-gateway-proxy`
+## Step 8: Test traffic via global gateway only
 
-If your release generated different names, update `global-kong-gateway/2-global-domain-httproutes.yaml`.
-
-## Step 6: Test traffic through global gateway only
-
-Get global proxy IP:
+### Option A: LoadBalancer IP
 
 ```bash
+kubectl get svc -n kong
 export GLOBAL_PROXY_IP=$(kubectl get svc -n kong kong-global-gateway-proxy -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo "$GLOBAL_PROXY_IP"
 ```
-
-Run curl tests:
 
 ```bash
 curl -s -H 'Host: retail-banking.hellocloudbank.io' "http://$GLOBAL_PROXY_IP" | jq
@@ -126,11 +170,26 @@ curl -s -H 'Host: payments.hellocloudbank.io' "http://$GLOBAL_PROXY_IP" | jq
 curl -s -H 'Host: grc.hellocloudbank.io' "http://$GLOBAL_PROXY_IP" | jq
 ```
 
-Optional local test via port-forward:
+### Option B: Port-forward
 
 ```bash
 kubectl -n kong port-forward svc/kong-global-gateway-proxy 18080:80
+```
+
+In another terminal:
+
+```bash
 curl -s -H 'Host: retail-banking.hellocloudbank.io' http://127.0.0.1:18080 | jq
 curl -s -H 'Host: payments.hellocloudbank.io' http://127.0.0.1:18080 | jq
 curl -s -H 'Host: grc.hellocloudbank.io' http://127.0.0.1:18080 | jq
 ```
+
+## Step 9: Verify app services are internal only
+
+```bash
+kubectl get svc -n retail-banking customer-profile-svc -o wide
+kubectl get svc -n payments transfer-svc -o wide
+kubectl get svc -n grc fraud-svc -o wide
+```
+
+Expected: `TYPE=ClusterIP`.
