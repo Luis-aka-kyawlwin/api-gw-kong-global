@@ -185,6 +185,7 @@ Expected: `TYPE=ClusterIP`.
 
 
 ### Result
+```bash
 vagrant@apex-vagrant-box:~$ curl -s -H 'Host: retail-banking.hellocloudbank.io' http://127.0.0.1:18080 | jq
 curl -s -H 'Host: payments.hellocloudbank.io' http://127.0.0.1:18080 | jq
 curl -s -H 'Host: grc.hellocloudbank.io' http://127.0.0.1:18080 | jq
@@ -348,3 +349,4 @@ curl -s -H 'Host: grc.hellocloudbank.io' http://127.0.0.1:18080 | jq
   "code": 200
 }
 vagrant@apex-vagrant-box:~$ 
+```
