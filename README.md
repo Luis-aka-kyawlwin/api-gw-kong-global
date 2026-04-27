@@ -1,4 +1,4 @@
-# Multi-Controller Kong Deployment Runbook
+# Multi-Tier and Kong Controller Deployment
 
 This runbook deploys 4 separate Kong Ingress Controller (KIC) and Gateway API data planes:
 
@@ -182,3 +182,169 @@ kubectl get svc -n grc fraud-svc -o wide
 ```
 
 Expected: `TYPE=ClusterIP`.
+
+
+### Result
+vagrant@apex-vagrant-box:~$ curl -s -H 'Host: retail-banking.hellocloudbank.io' http://127.0.0.1:18080 | jq
+curl -s -H 'Host: payments.hellocloudbank.io' http://127.0.0.1:18080 | jq
+curl -s -H 'Host: grc.hellocloudbank.io' http://127.0.0.1:18080 | jq
+{
+  "name": "customer-profile-svc",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": [
+    "10.252.2.5"
+  ],
+  "start_time": "2026-04-27T18:32:56.467185",
+  "end_time": "2026-04-27T18:32:56.488160",
+  "duration": "20.975272ms",
+  "body": "HelloCloudBank | Retail Banking | customer-profile-svc",
+  "upstream_calls": {
+    "http://account-svc.retail-banking.svc.cluster.local:8082": {
+      "name": "account-svc",
+      "uri": "http://account-svc.retail-banking.svc.cluster.local:8082",
+      "type": "HTTP",
+      "ip_addresses": [
+        "10.252.1.6"
+      ],
+      "start_time": "2026-04-27T18:32:56.479490",
+      "end_time": "2026-04-27T18:32:56.486889",
+      "duration": "7.398305ms",
+      "headers": {
+        "Content-Length": "951",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+      },
+      "body": "HelloCloudBank | Retail Banking | account-svc",
+      "upstream_calls": {
+        "http://statement-svc.retail-banking.svc.cluster.local:8083": {
+          "name": "statement-svc",
+          "uri": "http://statement-svc.retail-banking.svc.cluster.local:8083",
+          "type": "HTTP",
+          "ip_addresses": [
+            "10.252.3.6"
+          ],
+          "start_time": "2026-04-27T18:32:56.486147",
+          "end_time": "2026-04-27T18:32:56.486227",
+          "duration": "79.609µs",
+          "headers": {
+            "Content-Length": "297",
+            "Content-Type": "text/plain; charset=utf-8",
+            "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+          },
+          "body": "HelloCloudBank | Retail Banking | statement-svc",
+          "code": 200
+        }
+      },
+      "code": 200
+    }
+  },
+  "code": 200
+}
+{
+  "name": "transfer-svc",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": [
+    "10.252.3.7"
+  ],
+  "start_time": "2026-04-27T18:32:56.522078",
+  "end_time": "2026-04-27T18:32:56.538927",
+  "duration": "16.848892ms",
+  "body": "HelloCloudBank | Payments | transfer-svc",
+  "upstream_calls": {
+    "http://payment-gateway-svc.payments.svc.cluster.local:7072": {
+      "name": "payment-gateway-svc",
+      "uri": "http://payment-gateway-svc.payments.svc.cluster.local:7072",
+      "type": "HTTP",
+      "ip_addresses": [
+        "10.252.1.7"
+      ],
+      "start_time": "2026-04-27T18:32:56.529480",
+      "end_time": "2026-04-27T18:32:56.537628",
+      "duration": "8.147584ms",
+      "headers": {
+        "Content-Length": "916",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+      },
+      "body": "HelloCloudBank | Payments | payment-gateway-svc",
+      "upstream_calls": {
+        "http://fx-svc.payments.svc.cluster.local:7073": {
+          "name": "fx-svc",
+          "uri": "http://fx-svc.payments.svc.cluster.local:7073",
+          "type": "HTTP",
+          "ip_addresses": [
+            "10.252.2.6"
+          ],
+          "start_time": "2026-04-27T18:32:56.536797",
+          "end_time": "2026-04-27T18:32:56.536959",
+          "duration": "162.362µs",
+          "headers": {
+            "Content-Length": "278",
+            "Content-Type": "text/plain; charset=utf-8",
+            "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+          },
+          "body": "HelloCloudBank | Payments | fx-svc",
+          "code": 200
+        }
+      },
+      "code": 200
+    }
+  },
+  "code": 200
+}
+{
+  "name": "fraud-svc",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": [
+    "10.252.1.8"
+  ],
+  "start_time": "2026-04-27T18:32:56.589334",
+  "end_time": "2026-04-27T18:32:56.605446",
+  "duration": "16.112608ms",
+  "body": "HelloCloudBank | GRC | fraud-svc",
+  "upstream_calls": {
+    "http://audit-svc.grc.svc.cluster.local:6062": {
+      "name": "audit-svc",
+      "uri": "http://audit-svc.grc.svc.cluster.local:6062",
+      "type": "HTTP",
+      "ip_addresses": [
+        "10.252.3.8"
+      ],
+      "start_time": "2026-04-27T18:32:56.599077",
+      "end_time": "2026-04-27T18:32:56.604514",
+      "duration": "5.437074ms",
+      "headers": {
+        "Content-Length": "899",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+      },
+      "body": "HelloCloudBank | GRC | audit-svc",
+      "upstream_calls": {
+        "http://sanction-svc.grc.svc.cluster.local:6063": {
+          "name": "sanction-svc",
+          "uri": "http://sanction-svc.grc.svc.cluster.local:6063",
+          "type": "HTTP",
+          "ip_addresses": [
+            "10.252.2.7"
+          ],
+          "start_time": "2026-04-27T18:32:56.603379",
+          "end_time": "2026-04-27T18:32:56.603470",
+          "duration": "90.445µs",
+          "headers": {
+            "Content-Length": "284",
+            "Content-Type": "text/plain; charset=utf-8",
+            "Date": "Mon, 27 Apr 2026 18:32:56 GMT"
+          },
+          "body": "HelloCloudBank | GRC | sanction-svc",
+          "code": 200
+        }
+      },
+      "code": 200
+    }
+  },
+  "code": 200
+}
+vagrant@apex-vagrant-box:~$ 
