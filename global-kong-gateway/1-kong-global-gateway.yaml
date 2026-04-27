@@ -1,4 +1,4 @@
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: global-kong-api-gateway
@@ -11,4 +11,4 @@ spec:
       port: 80
       allowedRoutes:
         namespaces:
-          from: All
+          from: Same

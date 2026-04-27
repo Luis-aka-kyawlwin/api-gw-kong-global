@@ -1,6 +1,6 @@
 # Multi-Controller Kong Deployment Runbook
 
-This runbook deploys 4 separate Kong Ingress Controller (KIC) + gateway data planes:
+This runbook deploys 4 separate Kong Ingress Controller (KIC) and Gateway API data planes:
 
 1. Global KIC/gateway:
 `Release=kong-global`, `Namespace=kong`, `GatewayClass=kong-global`
@@ -17,12 +17,6 @@ This runbook deploys 4 separate Kong Ingress Controller (KIC) + gateway data pla
 kubectl config current-context
 helm version
 kubectl get ns
-```
-
-Make sure you are inside:
-
-```bash
-cd /workspace/apex/12-apigateway/06-kong-global-api-gateway
 ```
 
 ## Step 1: Install Gateway API CRDs
@@ -110,9 +104,11 @@ kubectl apply -f global-kong-gateway/0-kong-global-gateway-class.yaml
 kubectl apply -f domain-specific-kong-gateway/0-kong-gateway-class.yaml
 kubectl apply -f global-kong-gateway/1-kong-global-gateway.yaml
 kubectl apply -f domain-specific-kong-gateway/
-kubectl apply -f apps/1-retail-banking/5-customer-profile-httproute.yaml
-kubectl apply -f apps/2-payments/5-transfer-httproute.yaml
-kubectl apply -f apps/3-risk-compliance/5-fraud-httproute.yaml
+
+kubectl apply -f apps/1-retail-banking/
+kubectl apply -f apps/2-payments/
+kubectl apply -f apps/3-risk-compliance/
+
 kubectl apply -f reference-grants/
 kubectl apply -f global-kong-gateway/2-global-domain-httproutes.yaml
 ```
@@ -125,8 +121,6 @@ kubectl get gateway -A
 kubectl get httproute -A
 kubectl get referencegrant -A
 ```
-
-Deep check (Accepted/Programmed):
 
 ```bash
 kubectl describe gateway -n kong global-kong-api-gateway
@@ -143,16 +137,11 @@ kubectl describe gateway -n grc grc-kong-api-gateway
 2. `kong-payments-gateway-proxy` in `payments`
 3. `kong-grc-gateway-proxy` in `grc`
 
-Check them:
-
 ```bash
 kubectl get svc -n retail-banking | grep gateway-proxy
 kubectl get svc -n payments | grep gateway-proxy
 kubectl get svc -n grc | grep gateway-proxy
 ```
-
-If names differ, update backendRefs in:
-`global-kong-gateway/2-global-domain-httproutes.yaml`.
 
 ## Step 8: Test traffic via global gateway only
 
